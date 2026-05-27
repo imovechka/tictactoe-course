@@ -4,7 +4,8 @@
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
-
+#include <fstream>   // для std::ofstream
+#include <ctime>     // для std::time, std::localtime
  
 // Тесты check_win
  
@@ -241,29 +242,56 @@ int main(int argc, char *argv[]) {
   std::cout << "\n--- All tests are passed! --- \n\n";
 
   // Демо-игра
-  std::cout << "--- Demo-game P1 vs P2 ---\n\n";
+  // Демо-игра
+std::cout << "--- Demo-game P1 vs P2 ---\n\n";
 
-  ttt::game::State::Opts opts;
-  opts.rows = opts.cols = 20;
-  opts.win_len = 5;
-  opts.max_moves = 0;
+ttt::game::State::Opts opts;
+opts.rows = opts.cols = 20;
+opts.win_len = 5;
+opts.max_moves = 0;
 
-  auto field_initializer = ttt::game::RandomObstaclesFI(0.75, 50, 1);
+auto field_initializer = ttt::game::RandomObstaclesFI(0.75, 50, 1);
 
-  ttt::my_player::MyPlayer p1("p1", 3, 3);
-  ttt::my_player::MyPlayer p2("p2", 3, 3);
-  ttt::my_player::ConsoleWriter obs;
+ttt::my_player::MyPlayer p1("p1", 3, 3);
+ttt::my_player::MyPlayer p2("p2", 3, 3);
 
-  ttt::game::Game game(opts, &field_initializer);
-  game.add_player(ttt::game::Sign::X, &p1);
-  game.add_player(ttt::game::Sign::O, &p2);
-  game.add_observer(&obs);
+// Лог-файл
+std::time_t now = std::time(nullptr);
+std::tm* t = std::localtime(&now);
+char fname[100];
+std::strftime(fname, sizeof(fname), 
+              "test_my_player_vs_human_%Y%m%d_%H%M%S_log.txt", t);
+std::ofstream log_file(fname);
 
-  obs.print_game_state(game.get_state());
-  while (game.process() == ttt::game::MoveResult::OK) {
-    obs.print_game_state(game.get_state());
-  }
-  obs.print_game_state(game.get_state());
 
+ttt::my_player::OstreamWriter console_obs;  
+ttt::my_player::OstreamWriter file_obs(log_file);  
+
+// Игра 
+ttt::game::Game game(opts, &field_initializer);
+game.add_player(ttt::game::Sign::X, &p1);
+game.add_player(ttt::game::Sign::O, &p2);
+game.add_observer(&console_obs);
+game.add_observer(&file_obs);
+
+// Печать начального состояния
+console_obs.print_game_state(game.get_state());
+file_obs.print_game_state(game.get_state());
+
+// Игровой цикл 
+while (game.process() == ttt::game::MoveResult::OK) {
+  console_obs.print_game_state(game.get_state());
+  file_obs.print_game_state(game.get_state());
+}
+
+// Финальное состояние
+console_obs.print_game_state(game.get_state());
+file_obs.print_game_state(game.get_state());
+
+log_file.close();  // закрываем файл 
+
+
+
+  
   return 0;
 }
