@@ -1,6 +1,8 @@
 #include "my_observer.hpp"
 #include <iomanip>
-
+#include <fstream>
+#include <ctime>
+#include <iomanip>
 #include <iostream>
 
 namespace ttt::my_player {
@@ -105,6 +107,62 @@ void ConsoleWriter::handle_event(const State &state, const Event &event) {
     return;
   default:
     return;
+  }
+}
+
+// похоже на ConsoleWriter, только out_ вместо std::cout 
+
+void OstreamWriter::print_game_state(const State &state) {
+  const int cols = state.get_opts().cols;
+  const int rows = state.get_opts().rows;
+// Печать заголовок столбцов
+  out_ << "   ";
+  for (int x = 0; x < cols; ++x)
+    out_ << std::setw(2) << x % 10;
+  out_ << "\n";
+// разделитель 
+  out_ << "   +";
+  for (int x = 0; x < cols; ++x)
+    out_ << "--";
+  out_ << "\n";
+// печать строки доски
+  for (int y = 0; y < rows; ++y) {
+    out_ << std::setw(2) << y << " |";
+    for (int x = 0; x < cols; ++x) {
+      char c = '.';
+      switch (state.get_value(x, y)) {
+      case Sign::X: c = 'X'; break;
+      case Sign::O: c = 'O'; break;
+      case Sign::WALL: c = '#'; break;
+      default: break;
+      }
+      out_ << c << " ";
+    }
+    out_ << "\n";
+  }
+  out_ << "\n";
+}
+
+void OstreamWriter::handle_event(const State &state, const Event &event) {
+  switch (event.type) {
+  case EventType::GAME_STARTED:
+    out_ << "Game started!\n"; break;
+  case EventType::MOVE:
+    out_ << "Player " << print_sign(event.data.move.player)
+         << " played (" << event.data.move.x << ", " << event.data.move.y << ")\n";
+    break;
+  case EventType::PLAYER_JOINED:
+    out_ << "Player " << event.data.player_joined.player_name
+         << " joined as " << print_sign(event.data.player_joined.player_sign) << "\n";
+    break;
+  case EventType::DRAW:
+    out_ << "Draw!\n"; break;
+  case EventType::WIN:
+    out_ << "Player " << print_sign(event.data.win.player) << " won!\n"; break;
+  case EventType::DQ:
+    out_ << "Player " << print_sign(event.data.dq.player)
+         << " was disqualified by " << print_dq(event.data.dq.reason) << "\n"; break;
+  default: break;
   }
 }
 
